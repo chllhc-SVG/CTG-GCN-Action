@@ -1,0 +1,5 @@
+numpy>=1.23,<2.0
+opencv-python>=4.8,<5.0
+mediapipe==0.10.14
+websockets>=11,<13
+protobuf>=4.25,<5

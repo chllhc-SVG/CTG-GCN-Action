@@ -1,0 +1,5 @@
+idle
+waving
+stop
+clapping
+hands_together

@@ -1,0 +1,4 @@
+idle
+waving
+clapping
+stop

@@ -1,0 +1,36 @@
+services:
+  ctrgcn-action-service:
+    platform: ${DOCKER_DEFAULT_PLATFORM:-linux/amd64}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ctrgcn-action-service
+    restart: "no"
+    ports:
+      - "8765:8765"
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./work_dir/webcam_mediapipe_pose_hands_idle_waving_clapping_stop_tcn_pose_hands:/app/work_dir/webcam_mediapipe_pose_hands_idle_waving_clapping_stop_tcn_pose_hands:ro
+    command:
+      - python
+      - scripts/mediapipe_tcn_ws_server.py
+      - --weights
+      - work_dir/webcam_mediapipe_pose_hands_idle_waving_clapping_stop_tcn_pose_hands/best_model.pt
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8765"
+      - --feature-mode
+      - pose_hands
+      - --window-size
+      - "64"
+      - --stride
+      - "4"
+      - --model-complexity
+      - "0"
+      - --smooth
+      - "5"
+      - --confidence-threshold
+      - "0.55"
+      - --cpu
