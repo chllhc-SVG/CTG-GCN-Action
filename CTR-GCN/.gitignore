@@ -23,17 +23,12 @@ logs/
 # Large datasets and generated training outputs are not committed by default.
 data/
 datasets/**/*.npz
+datasets/**/*.mp4
 work_dir/**
+experiments/**
+artifacts/**
 
-# Keep the digital-human realtime recognition metadata directory.
-!work_dir/webcam_mediapipe_pose_hands_idle_waving_clapping_stop_tcn_pose_hands/
-!work_dir/webcam_mediapipe_pose_hands_idle_waving_clapping_stop_tcn_pose_hands/config.json
-!work_dir/webcam_mediapipe_pose_hands_idle_waving_clapping_stop_tcn_pose_hands/labels.txt
-!work_dir/webcam_mediapipe_pose_hands_idle_waving_clapping_stop_tcn_pose_hands/labels.json
-!work_dir/webcam_mediapipe_pose_hands_idle_waving_clapping_stop_tcn_pose_hands/best_confusion_matrix.txt
-
-# Model weights are large. Keep this project weight so pnpm docker:dev can run after clone.
+# Training outputs and model checkpoints are generated locally.
 *.pt
 *.pth
 *.onnx
-!work_dir/webcam_mediapipe_pose_hands_idle_waving_clapping_stop_tcn_pose_hands/best_model.pt

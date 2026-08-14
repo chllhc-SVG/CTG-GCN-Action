@@ -1,0 +1,57 @@
+work_dir: ./work_dir/webcam_mediapipe/ctrgcn_three_actions
+
+# feeder: 直接读 MediaPipe 33 点 .npz 散文件
+feeder: feeders.feeder_mediapipe.Feeder
+train_feeder_args:
+  data_path: datasets/webcam_mediapipe
+  split: train
+  val_ratio: 0.15
+  seed: 42
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  random_rot: False
+  window_size: 64
+  normalization: True
+  p_interval: [0.95]
+  vel: False
+  bone: False
+
+test_feeder_args:
+  data_path: datasets/webcam_mediapipe
+  split: test
+  val_ratio: 0.15
+  seed: 42
+  window_size: 64
+  normalization: True
+  p_interval: [0.95]
+  vel: False
+  bone: False
+  debug: False
+
+# model: CTR-GCN，使用 MediaPipe 33 点 graph
+model: model.ctrgcn.Model
+model_args:
+  num_class: 3
+  num_point: 33
+  num_person: 2
+  graph: graph.mediapipe_pose.Graph
+  graph_args:
+    labeling_mode: 'spatial'
+  in_channels: 3
+
+# optim
+weight_decay: 0.0004
+base_lr: 0.1
+lr_decay_rate: 0.1
+step: [35, 55]
+warm_up_epoch: 5
+
+# training
+device: [0]
+batch_size: 4
+test_batch_size: 4
+num_epoch: 80
+nesterov: True
+num_worker: 0

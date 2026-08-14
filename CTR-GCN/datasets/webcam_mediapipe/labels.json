@@ -2,5 +2,6 @@
   "0": "idle",
   "1": "waving",
   "2": "clapping",
-  "3": "stop"
+  "3": "leg_lunge",
+  "4": "jumping_jack"
 }

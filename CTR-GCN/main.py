@@ -495,7 +495,7 @@ class Processor():
                 self.val_writer.add_scalar('acc', accuracy, self.global_step)
 
             score_dict = dict(
-                zip(self.data_loader[ln].dataset.sample_name, score))
+                zip([os.path.basename(s[0]) for s in self.data_loader[ln].dataset.samples], score))
             self.print_log('\tMean {} loss of {} batches: {}.'.format(
                 ln, len(self.data_loader[ln]), np.mean(loss_value)))
             for k in self.arg.show_topk:
@@ -535,7 +535,13 @@ class Processor():
                 self.eval(epoch, save_score=self.arg.save_score, loader_name=['test'])
 
             # test the best model
-            weights_path = glob.glob(os.path.join(self.arg.work_dir, 'runs-'+str(self.best_acc_epoch)+'*'))[0]
+            pattern = os.path.join(self.arg.work_dir, f"runs-{self.best_acc_epoch}-*.pt")
+            candidates = sorted(glob.glob(pattern))
+            if not candidates:
+                candidates = sorted(glob.glob(os.path.join(self.arg.work_dir, 'runs-*.pt')))
+            if not candidates:
+                raise FileNotFoundError(f'No checkpoint found in {self.arg.work_dir} matching {pattern}')
+            weights_path = candidates[-1]
             weights = torch.load(weights_path)
             if type(self.arg.device) is list:
                 if len(self.arg.device) > 1:
@@ -578,7 +584,7 @@ if __name__ == '__main__':
     # load arg form config file
     p = parser.parse_args()
     if p.config is not None:
-        with open(p.config, 'r') as f:
+        with open(p.config, 'r', encoding='utf-8') as f:
             default_arg = yaml.safe_load(f)
         key = vars(p).keys()
         for k in default_arg.keys():
