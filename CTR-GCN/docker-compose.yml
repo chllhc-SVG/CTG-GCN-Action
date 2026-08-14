@@ -1,0 +1,36 @@
+services:
+  ctrgcn-infer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ctrgcn-infer:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./work_dir:/app/CTR-GCN/work_dir:ro
+      - ./datasets:/app/CTR-GCN/datasets:ro
+      - ./templates:/app/CTR-GCN/templates:ro
+    environment:
+      CTRGCN_DEVICE: auto
+      CTRGCN_WORK_DIR: /app/CTR-GCN/work_dir/webcam_mediapipe/ctrgcn_five_actions
+      CTRGCN_LABELS: /app/CTR-GCN/datasets/webcam_mediapipe/labels.json
+      CTRGCN_TEMPLATES_DIR: /app/CTR-GCN/templates
+      CTRGCN_WINDOW_SIZE: 64
+      CTRGCN_STRIDE: 4
+      CTRGCN_QUALITY_THRESHOLD: 0.55
+      CTRGCN_ACTION_CONFIDENCE_THRESHOLD: 0.88
+      CTRGCN_MOTION_THRESHOLD: 0.045
+      CTRGCN_IDLE_MOTION_THRESHOLD: 0.03
+      CTRGCN_SUSTAIN_FRAMES: 8
+      CTRGCN_QUALITY_MIN_CONFIDENCE: 0.75
+      CTRGCN_FINAL_DEBOUNCE: 7
+    restart: unless-stopped
+
+  web-ui:
+    image: ctrgcn-infer:latest
+    depends_on:
+      - ctrgcn-infer
+    ports:
+      - "3000:3000"
+    command: ["python", "-m", "http.server", "3000", "--bind", "0.0.0.0", "--directory", "web"]
+    restart: unless-stopped

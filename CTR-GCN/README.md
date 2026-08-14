@@ -50,9 +50,11 @@ CTR-GCN/
 │   ├── dataset/
 │   │   └── collect_webcam_mediapipe.py
 │   ├── inference/
-│   │   └── webcam_realtime_ctrgcn.py
-│   └── pipelines/
-│       └── extract_mediapipe_from_videos.py
+│   │   ├── webcam_realtime_ctrgcn.py
+│   │   └── docker_realtime_server.py
+│   └── service/
+│       ├── host_camera_client.py
+│       └── realtime_inference_server.py
 ├── work_dir/
 │   └── webcam_mediapipe/
 │       └── ctrgcn_three_actions/
@@ -218,249 +220,75 @@ python scripts\inference\webcam_realtime_ctrgcn.py ^
 
 For smoother realtime preview, the inference window is intentionally kept at a moderate display size and the MediaPipe model complexity is set low by default during collection.
 
-### Exit keys
-
-- `Q`
-- `Esc`
-
 ---
 
-## Label order
+## Workflow 5: Docker service + host camera client
 
-Keep the label order consistent everywhere:
+This is the recommended way to run realtime inference when you want Docker for the model stack but still need the host machine to access the camera.
 
-```text
-0 = idle
-1 = waving
-2 = clapping
+### What runs where
+
+- **Docker container**: MediaPipe pose extraction, CTR-GCN inference, template matching
+- **Host machine**: webcam capture, JPEG encoding, request loop, local preview
+
+### Start the Docker service
+
+```bash
+cd CTR-GCN
+docker compose up --build
 ```
 
-The same order must be used by:
+The service listens on:
 
-- `labels.txt`
-- `labels.json`
-- training config
-- inference script
+- `GET /health`
+- `GET /config`
+- `POST /infer-frame`
 
----
+### Start the host camera client
 
-## Training config
-
-Main configuration file:
-
-```text
-config/mediapipe_pose/default.yaml
+```bash
+cd CTR-GCN
+python scripts/service/host_camera_client.py --server http://127.0.0.1:8000 --show-preview
 ```
 
-Important settings:
+### How it works
 
-- `num_class: 3`
-- `num_point: 33`
-- `window_size: 64`
-- `normalization: True`
-- `data_path: datasets/webcam_mediapipe`
+The host client:
 
----
+1. opens the webcam directly on the host OS
+2. encodes each frame as JPEG
+3. sends the image to the Docker API
+4. receives the prediction JSON
+5. shows a local preview with the returned label
 
-## Notes on dataset quality
+This avoids the usual Docker camera-access problems on macOS and Windows.
 
-If the model feels inaccurate, the most common causes are:
+### Suggested container command
 
-- too few samples per class
-- clips are too long or contain multiple actions
-- pose is partially out of frame
-- camera angle differs a lot from training data
-- class balance is uneven
-- raw videos are noisy or inconsistent
+If you want to run the API server directly instead of Compose:
 
-For this project, a small but clean dataset usually works better than a larger but messy one.
-
----
-
-## Suggested next step
-
-If you want the best results, collect more clips so each class has at least:
-
-- `30` samples minimum
-- `50+` samples is better
-
-Keep each clip short and visually consistent.
-
----
-
-## Step-by-step operation checklist
-
-### 1) Activate the correct environment and enter the repo
-
-```powershell
-cd D:\B\python\xiaoke-project\ctrgcn-action-project\CTR-GCN
+```bash
+docker build -t ctrgcn-infer .
+docker run --rm -p 8000:8000 \
+  -e CTRGCN_WORK_DIR=/app/CTR-GCN/work_dir/webcam_mediapipe/ctrgcn_five_actions \
+  -e CTRGCN_LABELS=/app/CTR-GCN/datasets/webcam_mediapipe/labels.json \
+  -e CTRGCN_TEMPLATES_DIR=/app/CTR-GCN/templates \
+  ctrgcn-infer \
+  python scripts/inference/docker_realtime_server.py --host 0.0.0.0 --port 8000
 ```
 
-Make sure the environment has the required packages installed, especially:
+### Suggested host client command
 
-- `torch`
-- `numpy`
-- `opencv-python`
-- `mediapipe`
-- `pyyaml`
-- `tqdm`
-- `tensorboardX`
-- `scikit-learn`
-
-For better real-time performance:
-
-- use `--model-complexity 0` when collecting data
-- use `--device cuda` with the verified `posec3d` environment on the RTX 3050
-- keep the webcam window resolution around `1280x720` for capture and let the scripts fit the image to the screen while preserving aspect ratio
-- use a fixed camera and simple background
-
----
-
-### 2) Collect your own webcam dataset
-
-Run:
-
-```powershell
-D:\B\Anaconda\envs\posec3d\python.exe scripts\dataset\collect_webcam_mediapipe.py --output-dir datasets\webcam_mediapipe --labels idle,waving,clapping --camera 0 --record-seconds 3 --width 1280 --height 720 --model-complexity 0 --save-video
-```
-
-During collection:
-
-- `0` selects `idle`
-- `1` selects `waving`
-- `2` selects `clapping`
-- `R` toggles continuous recording on/off
-- `Q` or `Esc` exits
-
-Recommended recording rules:
-
-- one person only
-- full body fully visible
-- one clear action per clip
-- stable camera
-- 2~4 seconds per clip
-- keep the action centered in frame
-
----
-
-### 3) Check the collected dataset
-
-After recording, confirm that the dataset folder contains:
-
-```text
-datasets/webcam_mediapipe/
-├── idle/
-├── waving/
-└── clapping/
-```
-
-Also confirm that these files exist:
-
-```text
-datasets/webcam_mediapipe/labels.txt
-datasets/webcam_mediapipe/labels.json
-```
-
-The label order must be:
-
-```text
-0 = idle
-1 = waving
-2 = clapping
+```bash
+python scripts/service/host_camera_client.py --server http://127.0.0.1:8000 --camera 0 --show-preview
 ```
 
 ---
 
-### 4) Train CTR-GCN
+## Notes for Docker usage
 
-Run:
-
-```powershell
-python main.py --config config\mediapipe_pose\default.yaml --phase train
-```
-
-Training uses:
-
-- `config/mediapipe_pose/default.yaml`
-- `datasets/webcam_mediapipe`
-- `work_dir/webcam_mediapipe/ctrgcn_three_actions`
-
-If training succeeds, the work directory should contain:
-
-- `runs-*.pt`
-- `log.txt`
-- `config.yaml`
-
----
-
-### 5) Run real-time webcam inference
-
-After training, launch:
-
-```powershell
-D:\B\Anaconda\envs\posec3d\python.exe scripts\inference\webcam_realtime_ctrgcn.py --work-dir .\work_dir\webcam_mediapipe\ctrgcn_three_actions --labels .\datasets\webcam_mediapipe\labels.json --camera 0 --window-size 64 --stride 4 --display-width 1280 --display-height 720 --device cuda
-```
-
-During inference:
-
-- the webcam is opened
-- MediaPipe extracts pose landmarks frame by frame
-- the last 64 frames are fed to CTR-GCN
-- the predicted label is shown on screen
-
-Exit with:
-
-- `Q`
-- `Esc`
-
----
-
-### 6) If you already have raw `.mp4` videos
-
-If you first recorded raw videos into class folders, use the extraction pipeline instead:
-
-```powershell
-python scripts\pipelines\extract_mediapipe_from_videos.py --input-dir D:\B\python\xiaoke-project\dataset --output-dir D:\B\python\xiaoke-project\ctrgcn-action-project\CTR-GCN\datasets\webcam_mediapipe --labels idle,waving,clapping --save-visualization
-```
-
-This converts raw clips into the same `.npz` format used by training.
-
----
-
-### 7) If the accuracy is low
-
-Usually the cause is one or more of these:
-
-- too few samples per class
-- clips contain multiple actions
-- body is partially out of frame
-- camera angle is inconsistent
-- labels are imbalanced
-- the pose detector misses too many frames
-
-If this happens, collect more clean clips before changing the model.
-
----
-
-## Requirements
-
-Use the Python environment that already has:
-
-- `torch`
-- `numpy`
-- `opencv-python`
-- `mediapipe`
-- `pyyaml`
-- `tqdm`
-- `tensorboardX`
-- `scikit-learn`
-
----
-
-## Quick start summary
-
-```text
-1. Collect or convert videos into datasets/webcam_mediapipe/
-2. Train with main.py and config/mediapipe_pose/default.yaml
-3. Run webcam_realtime_ctrgcn.py for live recognition
-```
+- Make sure your `work_dir` contains a valid `runs-*.pt` checkpoint.
+- Make sure `datasets/webcam_mediapipe/labels.json` exists or pass `--labels`.
+- If you don't need template matching, you can leave `templates/` empty or omit it.
+- On Windows, run Docker Desktop with WSL 2 backend enabled.
+- On macOS, the camera stays on the host; the container only handles inference.

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CTR-GCN Web Camera</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">CTR-GCN · Docker Inference</p>
+          <h1>Open your webcam in the browser and stream frames to Docker</h1>
+          <p class="subcopy">
+            Start the Docker service with <code>docker compose up --build</code>, then open this page.
+            The browser owns the camera; the container owns the model.
+          </p>
+        </div>
+        <div class="status-card">
+          <div class="status-row"><span>Backend</span><strong id="backendStatus">Disconnected</strong></div>
+          <div class="status-row"><span>Camera</span><strong id="cameraStatus">Idle</strong></div>
+          <div class="status-row"><span>Prediction</span><strong id="predictionLabel">---</strong></div>
+          <div class="status-row"><span>Confidence</span><strong id="predictionConfidence">0%</strong></div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <div class="video-panel">
+          <div class="panel-header">
+            <h2>Camera preview</h2>
+            <div class="panel-actions">
+              <button id="startBtn">Start camera</button>
+              <button id="stopBtn" class="secondary" disabled>Stop</button>
+            </div>
+          </div>
+          <div class="video-stage">
+            <video id="cameraVideo" playsinline muted autoplay></video>
+            <canvas id="captureCanvas" hidden></canvas>
+            <img id="mirrorFrame" alt="Server preview" />
+          </div>
+        </div>
+
+        <aside class="info-panel">
+          <h2>Latest result</h2>
+          <div class="metric"><span>Raw label</span><strong id="rawLabel">---</strong></div>
+          <div class="metric"><span>Quality</span><strong id="qualityLabel">n/a</strong></div>
+          <div class="metric"><span>Buffer</span><strong id="bufferFill">0</strong></div>
+          <div class="metric"><span>Latency</span><strong id="latencyMs">0 ms</strong></div>
+          <div class="metric"><span>Server FPS</span><strong id="serverFps">0.0</strong></div>
+          <pre id="top3Box">[]</pre>
+        </aside>
+      </section>
+
+      <section class="footnote">
+        <p>
+          If the browser asks for camera access, allow it. The page sends JPEG frames to the container at a controlled rate.
+        </p>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
